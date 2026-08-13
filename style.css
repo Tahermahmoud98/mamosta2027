@@ -1412,6 +1412,11 @@ body {
         break-before: page !important;
     }
 
+    .row {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
     .table-responsive {
         overflow: visible !important;
         page-break-inside: avoid !important;
