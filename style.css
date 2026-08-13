@@ -1531,8 +1531,8 @@ body {
     background-color: #fdfaf6 !important;
 }
 
-/* Scale the entire UI to 70% on screen */
-@media screen {
+/* Scale the entire UI to 70% on screen (Desktop only) */
+@media screen and (min-width: 992px) {
     .main-container {
         zoom: 0.7;
     }
