@@ -2649,6 +2649,7 @@ async function clearCurrentScheduleData() {
 async function addColumn() {
     const { value: className, isConfirmed } = await Swal.fire({
         title: t('add_single_column'), input: "text", showCancelButton: true, confirmButtonText: t('confirm'), cancelButtonText: t('cancel'),
+        customClass: { input: 'w-75 mx-auto' },
         inputValidator: v => !v ? '...' : allSchedules[activeScheduleName].columns.includes(v) ? '...' : null
     });
     if (isConfirmed && className) {
@@ -2662,7 +2663,7 @@ async function addColumn() {
 async function addMultipleColumns() {
     const { value: classNames, isConfirmed } = await Swal.fire({
         title: t('add_multiple_columns'),
-        html: `<textarea id="swal-classes-input" class="swal2-textarea"></textarea>`,
+        html: `<textarea id="swal-classes-input" class="swal2-textarea w-75 mx-auto"></textarea>`,
         confirmButtonText: t('confirm'), showCancelButton: true, cancelButtonText: t('cancel'),
         preConfirm: () => document.getElementById('swal-classes-input').value.split('\n').map(s => s.trim()).filter(Boolean)
     });
@@ -2783,15 +2784,15 @@ function addSubjectRow(subject = { name: "", periods: "" }) {
     const isOther = normalizedName && !activeSubjectsList.includes(normalizedName);
 
     const subjectInputHTML = `<div class="flex-grow-1">
-            <select class="form-select form-select-sm subject-select" onchange="document.getElementById('${uniqueId}_other').style.display = (this.value === '${otherLabel}' || this.value === 'یێن دی' || this.value === 'أخرى' || this.value === 'Other') ? 'block' : 'none'; updateClassInputsInModal(currentEditingTeacher);">
+            <select class="form-select form-select-sm subject-select shadow-sm border-0 bg-light rounded-pill px-3" onchange="document.getElementById('${uniqueId}_other').style.display = (this.value === '${otherLabel}' || this.value === 'یێن دی' || this.value === 'أخرى' || this.value === 'Other') ? 'block' : 'none'; updateClassInputsInModal(currentEditingTeacher);">
                 ${activeSubjectsList.map(s => `<option value="${s}" ${normalizedName === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
-            <input type="text" class="form-control form-control-sm mt-1 subject-other-input" id="${uniqueId}_other" style="display: ${isOther ? 'block' : 'none'};" placeholder="..." value="${isOther ? subject.name : ''}">
+            <input type="text" class="form-control form-control-sm mt-2 subject-other-input shadow-sm border-0 bg-light rounded-pill px-3" id="${uniqueId}_other" style="display: ${isOther ? 'block' : 'none'};" placeholder="..." value="${isOther ? subject.name : ''}">
         </div>`;
 
-    row.innerHTML = `<button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.subject-row').remove(); updateClassInputsInModal(currentEditingTeacher);"><i class="fas fa-times"></i></button>
+    row.innerHTML = `<button type="button" class="btn btn-white text-danger btn-sm rounded-circle shadow-sm border border-light-subtle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" onclick="this.closest('.subject-row').remove(); updateClassInputsInModal(currentEditingTeacher);" title="سڕینەوە"><i class="fas fa-times"></i></button>
                          ${subjectInputHTML}
-                         <input type="number" class="form-control form-control-sm subject-periods-input" value="${subject.periods || ''}" placeholder="0" min="0" style="max-width: 70px;" readonly>`;
+                         <div class="input-group input-group-sm shadow-sm rounded-pill" style="width: 60px;"><input type="number" class="form-control text-center fw-bold subject-periods-input bg-light border-0 rounded-pill px-1" value="${subject.periods || ''}" placeholder="0" min="0" readonly></div>`;
 
     document.getElementById("subjectsContainer").appendChild(row);
 }
@@ -2803,14 +2804,21 @@ function toggleModalLayout() {
 
 function updateSubjectPeriodsFromClasses() {
     const subjectRows = document.querySelectorAll("#subjectsContainer .subject-row");
+    
+    // Get all class inputs once to avoid multiple querySelectorAll calls
+    const allClassInputs = document.querySelectorAll("#teacherClassesContainer input[type='number']");
+    
     subjectRows.forEach(row => {
         const subjectName = getSubjectNameFromRow(row);
         const periodsInput = row.querySelector('.subject-periods-input');
         if (!subjectName || !periodsInput) return;
 
         let totalPeriods = 0;
-        const classInputs = document.querySelectorAll(`#teacherClassesContainer input[data-subject-name="${subjectName}"]`);
-        classInputs.forEach(input => { totalPeriods += parseInt(input.value) || 0; });
+        allClassInputs.forEach(input => {
+            if (input.dataset.subjectName === subjectName) {
+                totalPeriods += parseInt(input.value) || 0;
+            }
+        });
 
         periodsInput.value = totalPeriods > 0 ? totalPeriods : "";
     });
@@ -2818,7 +2826,8 @@ function updateSubjectPeriodsFromClasses() {
 
 function getSubjectNameFromRow(row) {
     const select = row.querySelector('.subject-select');
-    return select.value === 'یێن دی' ? row.querySelector('.subject-other-input').value.trim() : select.value;
+    const isOther = select.value === 'یێن دی' || select.value === 'أخرى' || select.value === 'Other' || select.value === 'شتی تر';
+    return isOther ? row.querySelector('.subject-other-input').value.trim() : select.value;
 }
 
 function isSubjectAlreadyAssignedToClass(subjectName, className, currentTeacherId) {
@@ -2872,7 +2881,7 @@ function updateClassInputsInModal(teacher = null) {
                 const value = transientClassValues?.[colName]?.[subName] || teacher?.classes?.[colName]?.[subName] || "";
                 const isOtherAssigned = isSubjectAlreadyAssignedToClass(subName, colName, currentTeacherId);
                 const warningIcon = isOtherAssigned ? `<i class="fas fa-exclamation-triangle text-warning ms-1" title="ئه‌ڤ بابه‌ته‌ بۆ ڤێ پولێ ژلایێ ماموستایه‌كێ دی ڤه‌ هاتیه‌ دانان"></i>` : '';
-                return `<div class="d-flex align-items-center gap-2 bg-light border border-secondary-subtle rounded-3 p-1 px-2 shadow-xs"><span class="small fw-semibold text-secondary-emphasis" style="font-size:0.85rem;">${subName} ${warningIcon}</span><input type="number" class="form-control form-control-sm text-center p-0 fw-bold border-secondary-subtle bg-white" style="width: 60px; height: 30px; border-radius: 6px; font-size: 0.95rem;" data-class-name="${colName}" data-subject-name="${subName}" value="${value}" min="0"></div>`;
+                return `<div class="d-flex align-items-center justify-content-between gap-2 bg-light rounded-pill p-1 ps-3 shadow-none border border-light-subtle"><span class="small fw-bold text-secondary-emphasis" style="font-size:0.85rem;">${subName} ${warningIcon}</span><input type="number" class="form-control form-control-sm text-center p-0 fw-bold border-0 bg-white shadow-sm rounded-pill" style="width: 45px; height: 28px; font-size: 0.95rem;" data-class-name="${colName}" data-subject-name="${subName}" value="${value}" min="0"></div>`;
             }).join('');
 
             if (subjectNames.length === 0) {
@@ -2882,7 +2891,7 @@ function updateClassInputsInModal(teacher = null) {
             const hasAssignments = subjectNames.some(subName => (transientClassValues?.[colName]?.[subName] > 0) || (teacher?.classes?.[colName]?.[subName] > 0));
             const assignedMark = hasAssignments ? '<i class="fas fa-check-circle text-success ms-2 assignment-checkmark"></i>' : '';
 
-            return `<div class="col-md-4 col-sm-6 mb-2"><div class="card card-body d-flex flex-column align-items-start gap-2 py-2 px-3 shadow-xs border border-light-subtle rounded-3 h-100"><h6 class="mb-1 fw-bold small text-dark-emphasis d-flex align-items-center gap-2"><i class="fas fa-school text-primary-emphasis"></i><span>پولا ${colName}${assignedMark}</span></h6><div class="d-flex flex-column w-100 gap-2">${inputsHTML}</div></div></div>`;
+            return `<div class="col-md-4 col-sm-6 mb-3"><div class="card card-body d-flex flex-column align-items-start gap-2 p-3 shadow-sm border border-light-subtle bg-white rounded-4 h-100"><h6 class="mb-2 fw-bold small text-primary d-flex align-items-center gap-2"><i class="fas fa-school text-primary-emphasis"></i><span>پولا ${colName}${assignedMark}</span></h6><div class="d-flex flex-column w-100 gap-2">${inputsHTML}</div></div></div>`;
         }).join('');
         container.innerHTML = `<div class="row g-2">${columnsHTML}</div>`;
     } else { // Horizontal Mode
@@ -3111,6 +3120,40 @@ function saveTeacherData(teacherId = null) {
         schedule.teachers.push(teacherData);
         nextTeacherId++;
     }
+
+    // --- Update Leave Table Data ---
+    if (!schedule.settings) schedule.settings = {};
+    if (!schedule.settings.leaveTableData) schedule.settings.leaveTableData = [];
+    
+    let leaveTableData = schedule.settings.leaveTableData;
+    let existingIndex = leaveTableData.findIndex(row => row && row[1] === teacherData.name);
+    
+    if (teacherData.onLeave) {
+        if (existingIndex === -1) {
+            let insertIndex = leaveTableData.findIndex(row => !row || !row[1] || row[1].trim() === '');
+            if (insertIndex === -1) {
+                insertIndex = leaveTableData.length;
+                if (!schedule.settings.leaveTableRows || insertIndex >= schedule.settings.leaveTableRows) {
+                    schedule.settings.leaveTableRows = insertIndex + 1;
+                }
+            }
+            leaveTableData[insertIndex] = [
+                insertIndex + 1,
+                teacherData.name,
+                teacherData.specialization,
+                '',
+                '',
+                'مۆڵەتدار (مجاز)'
+            ];
+        } else {
+             leaveTableData[existingIndex][2] = teacherData.specialization; // update specialization
+        }
+    } else {
+        if (existingIndex !== -1) {
+            leaveTableData[existingIndex] = []; // Clear the row if they are no longer on leave
+        }
+    }
+    // ---------------------------------
 
     syncTimetablesWithTeacherQuota(schedule);
 

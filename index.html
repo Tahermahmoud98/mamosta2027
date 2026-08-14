@@ -281,69 +281,99 @@
     </div>
 
     <!-- Teacher Modal -->
-    <div class="modal fade" id="teacherModal" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="teacherModalTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="teacherForm"><input type="hidden" id="teacherId"><div class="row"><div class="col-lg-4 border-end"><h6 class="fw-bold" data-i18n="modal_teacher_info">زانیاریێن ماموستای</h6>
-        <div class="mb-3"><label class="form-label" data-i18n="teacher_name_label">ناڤێ ماموستای</label><input type="text" class="form-control" id="teacherName" required></div>
-        <div class="mb-3"><label class="form-label" data-i18n="certificate_label">بروانامه</label>
-            <select id="teacherCertificateSelect" class="form-select" onchange="this.value==='یێن دی' || this.value==='أخرى' || this.value==='Other' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
-            </select>
-            <input type="text" class="form-control mt-2" id="teacherCertificateOther" style="display: none;" placeholder="...">
-        </div>
-        <div class="mb-3"><label class="form-label" data-i18n="job_title_label">نیشانا کاری</label>
-            <select id="teacherJobTitleSelect" class="form-select" onchange="this.value==='یێن دی' || this.value==='أخرى' || this.value==='Other' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
-            </select>
-            <input type="text" class="form-control mt-2" id="teacherJobTitleOther" style="display: none;" placeholder="...">
-        </div>
-        <div class="mb-3"><label class="form-label" data-i18n="specialization_label">بسپور</label>
-            <select id="teacherSpecializationSelect" class="form-select" onchange="this.value==='یێن دی' || this.value==='أخرى' || this.value==='Other' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
-            </select>
-            <input type="text" class="form-control mt-2" id="teacherSpecializationOther" style="display: none;" placeholder="...">
-        </div>
-        <div class="mb-3"><label class="form-label" data-i18n="gender_label">ڕەگەز</label>
-            <select id="teacherGenderSelect" class="form-select">
-                <option value="" data-i18n="select_option">اختر...</option>
-                <option value="نێر" data-i18n="gender_male">نێر (ذكر)</option>
-                <option value="مێ" data-i18n="gender_female">مێ (أنثى)</option>
-            </select>
-        </div>
-        <div class="mb-3"><label class="form-label" data-i18n="status_label">میلاك / وانەبێژ</label>
-            <select id="teacherStatusSelect" class="form-select">
-                <option value="" data-i18n="select_option">اختر...</option>
-                <option value="ميلاك">میلاك</option>
-                <option value="گرێبەست">گرێبەست</option>
-                <option value="وانەبێژ">وانەبێژ</option>
-                <option value="خۆبەخش">خۆبەخش</option>
-            </select>
-        </div>
-        <div class="mb-3"><label class="form-label" data-i18n="phone_label">مۆبایل</label>
-            <input type="text" class="form-control" id="teacherPhone" placeholder="0750...">
-        </div>
-        <div class="mb-3 form-check">
-            <input type="checkbox" class="form-check-input" id="teacherOnLeave">
-            <label class="form-check-label fw-bold text-danger" for="teacherOnLeave">مۆڵەتدار (مجاز / مجازة)</label>
-        </div>
-        <hr><h6 class="fw-bold" data-i18n="subjects_list_label">لیستا بابه‌تان</h6><div id="subjectsContainer"></div><button type="button" class="btn btn-outline-success btn-sm mt-2" id="addSubjectBtn" data-i18n="add_subject_btn"><i class="fas fa-plus me-1"></i> زیادکرنا بابه‌ت</button>
-        </div><div class="col-lg-8">
-            <ul class="nav nav-tabs mb-3" id="teacherModalTabs" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold" id="classes-tab" data-bs-toggle="tab" data-bs-target="#classes-tab-pane" type="button" role="tab" data-i18n="tab_classes_dist"><i class="fas fa-chalkboard-teacher me-1"></i> دابه‌شکرنا لسه‌ر پولان</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-danger" id="availability-tab" data-bs-toggle="tab" data-bs-target="#availability-tab-pane" type="button" role="tab" data-i18n="tab_availability"><i class="fas fa-calendar-times me-1"></i> قەدەغەکرنا وانان (حظر الحصص)</button>
-              </li>
-            </ul>
-            <div class="tab-content" id="teacherModalTabContent">
-              <div class="tab-pane fade show active" id="classes-tab-pane" role="tabpanel" tabindex="0">
-                  <div class="d-flex justify-content-between align-items-center">
-                      <p class="fw-bold mb-2" data-i18n="tab_classes_dist">دابه‌شکرنا لسه‌ر پولان:</p>
-                      <button type="button" class="btn btn-outline-secondary btn-sm mb-2" onclick="toggleModalLayout()" data-i18n-title="toggle_view_btn" title="گوهورینا دیمه‌نێ دابه‌شکرنێ"><i class="fas fa-retweet me-1"></i><span data-i18n="toggle_view_btn">گوهورین</span></button>
-                  </div>
-                  <hr class="mt-2"><div id="teacherClassesContainer" style="max-height: 500px; overflow-y: auto;"></div>
-              </div>
-              <div class="tab-pane fade" id="availability-tab-pane" role="tabpanel" tabindex="0">
-                  <div id="teacherAvailabilityGrid"></div>
-              </div>
+    <div class="modal fade" id="teacherModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-3 pt-4 px-4 bg-white">
+                    <h5 class="modal-title fw-bold text-primary" id="teacherModalTitle"><i class="fas fa-chalkboard-teacher me-2"></i>زانیاریێن ماموستای</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <form id="teacherForm" class="h-100"><input type="hidden" id="teacherId">
+                        <div class="row g-0 h-100">
+                            <!-- Right Pane (Teacher Info) -->
+                            <div class="col-xl-4 col-lg-5 p-4 bg-white border-end border-light-subtle">
+                                <h6 class="fw-bold mb-4 text-secondary-emphasis"><i class="fas fa-id-card me-2 text-primary"></i>زانیاریێن کەسی</h6>
+        <div class="row g-3">
+            <div class="col-12"><label class="form-label small fw-bold text-secondary mb-1" data-i18n="teacher_name_label">ناڤێ ماموستای</label><input type="text" class="form-control bg-light border border-secondary-subtle shadow-none rounded-3" id="teacherName" required></div>
+            <div class="col-12"><label class="form-label small fw-bold text-secondary mb-1" data-i18n="certificate_label">بروانامه</label>
+                <select id="teacherCertificateSelect" class="form-select bg-light border border-secondary-subtle shadow-none rounded-3" onchange="this.value==='یێن دی' || this.value==='أخرى' || this.value==='Other' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
+                </select>
+                <input type="text" class="form-control bg-light border border-secondary-subtle shadow-none rounded-3 mt-1" id="teacherCertificateOther" style="display: none;" placeholder="...">
             </div>
-        </div></div></form></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="btn_close">داخستن</button><button type="submit" form="teacherForm" class="btn btn-primary" data-i18n="btn_save">پاشه‌كه‌وتكرن</button></div></div></div></div>
+            <div class="col-12"><label class="form-label small fw-bold text-secondary mb-1" data-i18n="job_title_label">نیشانا کاری</label>
+                <select id="teacherJobTitleSelect" class="form-select bg-light border border-secondary-subtle shadow-none rounded-3" onchange="this.value==='یێن دی' || this.value==='أخرى' || this.value==='Other' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
+                </select>
+                <input type="text" class="form-control bg-light border border-secondary-subtle shadow-none rounded-3 mt-1" id="teacherJobTitleOther" style="display: none;" placeholder="...">
+            </div>
+            <div class="col-12"><label class="form-label small fw-bold text-secondary mb-1" data-i18n="specialization_label">بسپور</label>
+                <select id="teacherSpecializationSelect" class="form-select bg-light border border-secondary-subtle shadow-none rounded-3" onchange="this.value==='یێن دی' || this.value==='أخرى' || this.value==='Other' ? this.nextElementSibling.style.display='block' : this.nextElementSibling.style.display='none'">
+                </select>
+                <input type="text" class="form-control bg-light border border-secondary-subtle shadow-none rounded-3 mt-1" id="teacherSpecializationOther" style="display: none;" placeholder="...">
+            </div>
+            <div class="col-12"><label class="form-label small fw-bold text-secondary mb-1" data-i18n="gender_label">ڕەگەز</label>
+                <select id="teacherGenderSelect" class="form-select bg-light border border-secondary-subtle shadow-none rounded-3">
+                    <option value="" data-i18n="select_option">اختر...</option>
+                    <option value="نێر" data-i18n="gender_male">نێر (ذكر)</option>
+                    <option value="مێ" data-i18n="gender_female">مێ (أنثى)</option>
+                </select>
+            </div>
+            <div class="col-12"><label class="form-label small fw-bold text-secondary mb-1" data-i18n="status_label">میلاك / وانەبێژ</label>
+                <select id="teacherStatusSelect" class="form-select bg-light border border-secondary-subtle shadow-none rounded-3">
+                    <option value="" data-i18n="select_option">اختر...</option>
+                    <option value="ميلاك">میلاك</option>
+                    <option value="گرێبەست">گرێبەست</option>
+                    <option value="وانەبێژ">وانەبێژ</option>
+                    <option value="خۆبەخش">خۆبەخش</option>
+                </select>
+            </div>
+            <div class="col-12"><label class="form-label small fw-bold text-secondary mb-1" data-i18n="phone_label">مۆبایل</label>
+                <input type="text" class="form-control bg-light border border-secondary-subtle shadow-none rounded-3" id="teacherPhone" placeholder="0750...">
+            </div>
+            <div class="col-12 mt-4 p-3 bg-danger-subtle rounded-4 d-flex align-items-center justify-content-between transition-all border-0" id="leaveToggleContainer">
+                <div>
+                    <label class="form-check-label fw-bold text-danger mb-0" for="teacherOnLeave"><i class="fas fa-user-clock me-2"></i>مۆڵەتدار (مجاز)</label>
+                    <div class="small text-danger opacity-75 mt-1" style="font-size: 0.75rem;">زیادکرن بۆ خشتێ مۆڵەتداران</div>
+                </div>
+                <div class="form-check form-switch m-0" style="padding-left: 0;">
+                    <input class="form-check-input shadow-sm" type="checkbox" id="teacherOnLeave" style="transform: scale(1.4); cursor: pointer; float: none; margin-left:0; margin-right: 15px;" title="مۆڵەتدار">
+                </div>
+            </div>
+        </div>
+        <hr class="text-secondary opacity-10 my-4">
+        <h6 class="fw-bold mb-3 text-secondary-emphasis" data-i18n="subjects_list_label"><i class="fas fa-book-open me-2 text-primary"></i>لیستا بابه‌تان</h6>
+        <div id="subjectsContainer" class="d-flex flex-column gap-2 mb-3"></div>
+        <button type="button" class="btn btn-light text-primary btn-sm w-100 rounded-pill fw-bold border-0 shadow-sm transition-all" id="addSubjectBtn" data-i18n="add_subject_btn"><i class="fas fa-plus me-1"></i> زیادکرنا بابه‌ت</button>
+        </div>
+        <!-- Left Pane (Classes Grid) -->
+        <div class="col-xl-8 col-lg-7 p-4 bg-light">
+            <div class="d-flex justify-content-center mb-4">
+                <ul class="nav nav-pills bg-white p-1 rounded-pill shadow-sm d-inline-flex border border-light-subtle" id="teacherModalTabs" role="tablist">
+                      <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold rounded-pill px-4 transition-all" id="classes-tab" data-bs-toggle="pill" data-bs-target="#classes-tab-pane" type="button" role="tab" data-i18n="tab_classes_dist"><i class="fas fa-sitemap me-2"></i>دابه‌شکرنا لسه‌ر پولان</button>
+                      </li>
+                      <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold rounded-pill px-4 transition-all text-danger" id="availability-tab" data-bs-toggle="pill" data-bs-target="#availability-tab-pane" type="button" role="tab" data-i18n="tab_availability"><i class="fas fa-calendar-times me-2"></i>قەدەغەکرنا وانان</button>
+                      </li>
+                    </ul>
+            </div>
+            <div class="tab-content" id="teacherModalTabContent">
+                <div class="tab-pane fade show active" id="classes-tab-pane" role="tabpanel" tabindex="0">
+                    <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+                        <h6 class="fw-bold m-0 text-secondary-emphasis" data-i18n="tab_classes_dist">دابه‌شکرنا لسه‌ر پولان:</h6>
+                        <button type="button" class="btn btn-white btn-sm rounded-circle shadow-sm border border-light-subtle" onclick="toggleModalLayout()" data-i18n-title="toggle_view_btn" title="گوهورینا دیمه‌نێ دابه‌شکرنێ" style="width: 32px; height: 32px;"><i class="fas fa-retweet text-primary"></i></button>
+                    </div>
+                    <div id="teacherClassesContainer" class="pb-2"></div>
+                </div>
+                <div class="tab-pane fade" id="availability-tab-pane" role="tabpanel" tabindex="0">
+                    <div id="teacherAvailabilityGrid"></div>
+                </div>
+            </div>
+        </div></div></form></div>
+        <div class="modal-footer border-top-0 bg-light rounded-bottom-4 pt-3 pb-4 px-4 shadow-sm" style="z-index: 10;">
+            <button type="button" class="btn btn-white rounded-pill px-4 fw-bold shadow-sm border border-light-subtle" data-bs-dismiss="modal" data-i18n="btn_close">داخستن</button>
+            <button type="submit" form="teacherForm" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm" data-i18n="btn_save"><i class="fas fa-save me-1"></i> پاشه‌كه‌وتكرن</button>
+        </div></div></div></div>
 
     <!-- Settings Modal -->
     <div class="modal fade" id="settingsModal" tabindex="-1">
