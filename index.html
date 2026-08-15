@@ -431,7 +431,7 @@
     
     <!-- Class Summary Modal -->
     <div class="modal fade" id="classSummaryModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="classSummaryModalTitle" data-i18n="class_summary_title">پوختەیا پولێ</h5>
@@ -440,11 +440,32 @@
                 <div class="modal-body" id="classSummaryModalBody">
                     <!-- Class summary content will be generated here -->
                 </div>
-                <div class="modal-footer no-print">
-                    <button type="button" class="btn btn-sm btn-outline-success" onclick="exportClassSummaryToExcel()"><i class="fas fa-file-excel me-1"></i>Excel</button>
-                    <button type="button" class="btn btn-sm btn-outline-info" onclick="downloadClassSummaryHTML()"><i class="fas fa-file-code me-1"></i>HTML</button>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="printClassSummary()"><i class="fas fa-print me-1"></i>چاپكرن</button>
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" data-i18n="btn_close">داخستن</button>
+                <div class="modal-footer border-top-0 p-3 w-100">
+                    <div class="row w-100 g-2 m-0">
+                        <div class="col-6 px-1">
+                            <button type="button" class="btn btn-light border w-100 py-2 fw-bold text-success" onclick="exportClassSummaryToExcel()">
+                                <i class="fas fa-file-excel me-2"></i>Excel
+                            </button>
+                        </div>
+                        <div class="col-6 px-1">
+                            <button type="button" class="btn btn-light border w-100 py-2 fw-bold text-info" onclick="downloadClassSummaryHTML()">
+                                <i class="fas fa-file-code me-2"></i>HTML
+                            </button>
+                        </div>
+                        <div class="col-6 px-1">
+                            <button type="button" class="btn btn-light border w-100 py-2 fw-bold text-primary" onclick="printClassSummary()">
+                                <i class="fas fa-print me-2"></i>چاپكرن
+                            </button>
+                        </div>
+                        <div class="col-6 px-1">
+                            <button type="button" class="btn btn-light border w-100 py-2 fw-bold text-danger" onclick="deleteClassFromSummaryModal()">
+                                <i class="fas fa-trash-alt me-2"></i>سڕینەوە
+                            </button>
+                        </div>
+                        <div class="col-12 px-1 mt-2">
+                            <button type="button" class="btn btn-secondary w-100 py-2 fw-bold shadow-sm" data-bs-dismiss="modal" data-i18n="btn_close">داخستن</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -455,7 +476,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="excel_template.js"></script>
 
-    <script src="app.js?v=133"></script>
+    <script src="app.js?v=146"></script>
 </body>
 </html>
 

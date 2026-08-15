@@ -3437,6 +3437,7 @@ function renderStatisticsTab() {
 
 
 
+let classSummaryModalInstance = null;
 function showClassSummary(className) {
     if (!classSummaryModalInstance) {
         classSummaryModalInstance = new bootstrap.Modal(document.getElementById('classSummaryModal'));
@@ -3447,26 +3448,40 @@ function showClassSummary(className) {
     document.getElementById('classSummaryModalTitle').innerText = `پوختەیا پولا ${className}`;
 
     let totalPeriods = 0;
-    let subjectsListHTML = '<ul class="list-group list-group-flush mb-3">';
+    let subjectsListHTML = '<div class="row g-3 mb-3 pe-1">';
 
     schedule.teachers.forEach(teacher => {
         if (teacher.classes?.[className]) {
             for (const [subjectName, periods] of Object.entries(teacher.classes[className])) {
                 if (periods > 0) {
                     totalPeriods += periods;
-                    subjectsListHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div><i class="fas fa-book text-primary me-2"></i><strong>${subjectName}</strong><br><small class="text-muted"><i class="fas fa-user-tie me-1"></i>${teacher.name}</small></div>
-                            <span class="badge bg-primary rounded-pill fs-6">${periods}</span>
-                        </li>`;
+                    subjectsListHTML += `
+                        <div class="col-12 col-sm-6 col-md-6 col-lg-4">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded-4 shadow-sm border h-100" style="background-color: #ffffff;">
+                                <div class="d-flex align-items-center gap-2 text-start overflow-hidden" style="width: calc(100% - 55px);">
+                                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="overflow-hidden" style="min-width: 0;">
+                                        <h6 class="fw-bold mb-1 text-dark text-truncate" style="font-size: 0.95rem; line-height: 1.3;" title="${subjectName}">${subjectName}</h6>
+                                        <div class="text-secondary text-truncate" style="font-size: 0.8rem; line-height: 1.3;" title="${teacher.name}"><i class="fas fa-user-tie me-1"></i>${teacher.name}</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column align-items-center justify-content-center bg-primary text-white rounded-3 shadow-sm flex-shrink-0" style="width: 48px; height: 48px;">
+                                    <span class="fw-bold" style="font-size: 1.3rem; line-height: 1;">${periods}</span>
+                                    <span style="font-size: 0.65rem;">وانە</span>
+                                </div>
+                            </div>
+                        </div>`;
                 }
             }
         }
     });
 
     if (totalPeriods === 0) {
-        subjectsListHTML += '<li class="list-group-item text-center text-muted">هیچ وانه‌یه‌ك نه‌هاتیه‌ دانان.</li>';
+        subjectsListHTML += '<div class="text-center text-muted py-4 border rounded-4 bg-light">هیچ وانه‌یه‌ك نه‌هاتیه‌ دانان.</div>';
     }
-    subjectsListHTML += '</ul>';
+    subjectsListHTML += '</div>';
 
     const grade = getGradeFromClassName(className);
     let nisabHTML = '';
@@ -3519,6 +3534,32 @@ function printClassSummary() {
     const content = document.getElementById('classSummaryModalBody').innerHTML;
     const title = `پوختەیا پولا ${className}`;
     printWithContent(title, `<div class="container mt-4"><h3 class="text-center text-primary mb-3">پوختەیا پولا ${className}</h3>${content}</div>`, { orientation: 'portrait' });
+}
+
+async function deleteClassFromSummaryModal() {
+    const className = document.getElementById('classSummaryModal').getAttribute('data-active-class');
+    if (!className) return;
+    
+    const { isConfirmed } = await Swal.fire({
+        title: `سڕینەوەی پۆل "${className}"`, 
+        text: "ئایا دڵنیای لە سڕینەوەی ئەم پۆلە و هەموو وانەکانی؟",
+        icon: "warning", 
+        showCancelButton: true, 
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: "بەڵێ، بسڕەوە", 
+        cancelButtonText: t('cancel') || "پاشگەزبوون"
+    });
+    
+    if (isConfirmed) {
+        const schedule = allSchedules[activeScheduleName];
+        schedule.columns = schedule.columns.filter(c => c !== className);
+        schedule.teachers.forEach(tItem => { if (tItem.classes?.[className]) delete tItem.classes[className]; });
+        saveData();
+        renderApp(searchInput.value);
+        
+        classSummaryModalInstance.hide();
+        showToast(t('toast_column_deleted') || "پۆل سڕایەوە");
+    }
 }
 
 function downloadClassSummaryHTML() {
@@ -3820,81 +3861,6 @@ function exportToExcel() {
     URL.revokeObjectURL(url);
 }
 
-let classSummaryModalInstance = null;
-function showClassSummary(className) {
-    if (!classSummaryModalInstance) {
-        classSummaryModalInstance = new bootstrap.Modal(document.getElementById('classSummaryModal'));
-    }
-
-    const schedule = allSchedules[activeScheduleName];
-    document.getElementById('classSummaryModalTitle').innerText = `پوختەیا پولا ${className}`;
-
-    let totalPeriods = 0;
-    let subjectsListHTML = '<ul class="list-group list-group-flush mb-3">';
-
-    schedule.teachers.forEach(teacher => {
-        if (teacher.classes?.[className]) {
-            for (const [subjectName, periods] of Object.entries(teacher.classes[className])) {
-                if (periods > 0) {
-                    totalPeriods += periods;
-                    subjectsListHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div><i class="fas fa-book text-primary me-2"></i><strong>${subjectName}</strong><br><small class="text-muted"><i class="fas fa-user-tie me-1"></i>${teacher.name}</small></div>
-                            <span class="badge bg-primary rounded-pill fs-6">${periods}</span>
-                        </li>`;
-                }
-            }
-        }
-    });
-
-    if (totalPeriods === 0) {
-        subjectsListHTML += '<li class="list-group-item text-center text-muted">هیچ وانه‌یه‌ك نه‌هاتیه‌ دانان.</li>';
-    }
-    subjectsListHTML += '</ul>';
-
-    const grade = getGradeFromClassName(className);
-    let nisabHTML = '';
-    if (grade && schedule.nisab) {
-        let missingSubjects = [];
-        for (const subject in schedule.nisab) {
-            if (schedule.nisab[subject][grade]) {
-                const required = schedule.nisab[subject][grade];
-                let distributedForSubject = 0;
-                schedule.teachers.forEach(t => {
-                    distributedForSubject += (t.classes?.[className]?.[subject] || 0);
-                });
-
-                if (distributedForSubject !== required) {
-                    const diff = distributedForSubject - required;
-                    if (diff < 0) {
-                        missingSubjects.push(`<span class="text-danger">${subject} (پێدڤی: ${required} | هەیە: ${distributedForSubject})</span>`);
-                    } else {
-                        missingSubjects.push(`<span class="text-warning">${subject} (زێدەیە ب ${diff} وانان)</span>`);
-                    }
-                }
-            }
-        }
-        if (missingSubjects.length > 0) {
-            nisabHTML = `<div class="alert alert-warning p-2 small mt-3"><h6 class="alert-heading fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i>تێبینی ژ نصابی:</h6><ul class="mb-0 ps-3">${missingSubjects.map(m => `<li>${m}</li>`).join('')}</ul></div>`;
-        } else if (totalPeriods > 0) {
-            nisabHTML = `<div class="alert alert-success p-2 small mt-3"><i class="fas fa-check-circle me-1"></i>هەمی وانە لدویڤ نصابی هاتینە تەواوکرن ب درستی.</div>`;
-        }
-    }
-
-    const bodyHTML = `
-            <div class="text-center mb-4">
-                <h2 class="display-4 fw-bold text-primary mb-0">${totalPeriods}</h2>
-                <p class="text-muted mb-0">کۆی وانەیێن دابەشکری</p>
-            </div>
-            <h6 class="fw-bold border-bottom pb-2">وردەکاری وانەکان (لدي المعلمين)</h6>
-            <div style="max-height: 400px; overflow-y: auto;">
-                ${subjectsListHTML}
-            </div>
-            ${nisabHTML}
-        `;
-
-    document.getElementById('classSummaryModalBody').innerHTML = bodyHTML;
-    classSummaryModalInstance.show();
-}
 
 // --- Cloud Storage & 4-Digit PIN Mapping ---
 const APP_KEYVAL_ID = 'MamostaTimetableApp_v1';
@@ -5962,25 +5928,25 @@ function renderMilakTab() {
     const html = `
     <div class="milak-form-container p-2 p-md-3">
         <!-- Top Action Toolbar -->
-        <div class="d-flex justify-content-end gap-2 mb-3 no-print">
-            <button class="btn btn-success btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm" onclick="exportMilakToExcel()" style="background-color: #28a745;"><i class="fas fa-file-excel me-1"></i>تصدير إكسل (Excel)</button>
-            <button class="btn btn-info btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm" onclick="downloadMilakHTML()" style="background-color: #17a2b8;"><i class="fas fa-file-code me-1"></i>تنزيل HTML</button>
-            <button class="btn btn-primary btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm" onclick="printMilakForm()" style="background-color: #007bff;"><i class="fas fa-print me-1"></i>چاپكرن (طباعة الاستمارة)</button>
+        <div class="d-flex flex-wrap justify-content-center justify-content-md-end gap-2 mb-3 no-print">
+            <button class="btn btn-success btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm flex-fill flex-md-grow-0" onclick="exportMilakToExcel()" style="background-color: #28a745;"><i class="fas fa-file-excel me-1"></i>تصدير إكسل (Excel)</button>
+            <button class="btn btn-info btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm flex-fill flex-md-grow-0" onclick="downloadMilakHTML()" style="background-color: #17a2b8;"><i class="fas fa-file-code me-1"></i>تنزيل HTML</button>
+            <button class="btn btn-primary btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm flex-fill flex-md-grow-0" onclick="printMilakForm()" style="background-color: #007bff;"><i class="fas fa-print me-1"></i>چاپكرن (طباعة الاستمارة)</button>
         </div>
 
         <div id="milakFormPrintArea">
             <!-- Print Header -->
         <div class="text-center mb-3 border-bottom pb-3">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <div class="text-start" style="min-width:180px;">
+            <div class="row align-items-center text-center mb-2 g-3">
+                <div class="col-6 col-md-3 text-start order-2 order-md-1">
                     <div class="small text-muted">${t('admin_date_placeholder', 'ژ._______ / _______ / _______')}</div>
                     <div class="small text-muted mt-1">${t('admin_signature_placeholder', 'کاریگری:___________')}</div>
                 </div>
-                <div class="text-center flex-grow-1">
-                    <h4 class="fw-bold mb-0 text-primary">${t('milak_form_title', 'فۆرما ڕێکخستنا ميلاکێ قوتابخانێ')}</h4>
+                <div class="col-12 col-md-6 order-1 order-md-2">
+                    <h4 class="fw-bold mb-0 text-primary" style="font-size: clamp(1.1rem, 4vw, 1.5rem);">${t('milak_form_title', 'فۆرما ڕێکخستنا ميلاکێ قوتابخانێ')}</h4>
                     <div class="text-muted small">${t('milak_form_subtitle', 'استمارة تنظيم ملاك المدرسة')}</div>
                 </div>
-                <div class="text-end" style="min-width:180px;">
+                <div class="col-6 col-md-3 text-end order-3 order-md-3">
                     <div class="small text-muted">${t('academic_year_placeholder', 'ساڵێ خواندنێ: ___________')}</div>
                     <div class="small text-muted mt-1">${t('year_lbl', 'ساڵا:')} ${new Date().getFullYear()}</div>
                 </div>
@@ -6574,7 +6540,7 @@ function exportMilakToExcel() {
     if (!schedule) { showToast('هیچ خشتهیهك ههڵبژاردی نیهڵ', 'warning'); return; }
 
     const md = schedule.settings && schedule.settings.milakData ? schedule.settings.milakData : {};
-    const fv = function (key) { return (md[key] !== undefined && md[key] !== null) ? String(md[key]) : ''; };
+    const fv = function (key, def = '') { return (md[key] !== undefined && md[key] !== null) ? String(md[key]) : String(def); };
 
     showToast('کاردەکەین بۆ ئامادەکردنی فایلی ئێکسێل...', 'info');
 
