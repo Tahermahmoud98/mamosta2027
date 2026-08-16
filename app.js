@@ -429,7 +429,7 @@ const LANG_KU_SORANI = {
     class_summary_title: "پوختەی پۆل",
     certificates: ["دپلۆم", "بەکالۆریۆس", "ماستەر", "دکتۆرا", "شتی تر"],
     job_titles: ["بەڕێوەبەر", "یارمەدیدەر", "مامۆستا", "مامۆستای گرێبەست", "شتی تر"],
-    specializations: ["کوردی", "بیرکاری", "ئینگلیزی", "عەرەبی", "زانست", "ئاینی ئیسلام", "کۆمەڵایەتی", "کارامەیی", "هونەر", "وەرزش", "کۆمپیوتەر", "دەروونزانی", "شتی تر"],
+    specializations: ["کوردی", "بیرکاری", "ئینگلیزی", "عەرەبی", "زانست", "ئاین", "کۆمەڵایەتی", "کارامەیی", "هونەر", "وەرزش", "کۆمپیوتەر", "دەروونزانی", "شتی تر"],
     work_days: ["شەممە", "یەکشەممە", "دووشەممە", "سێشەممە", "چوارشەممە", "پێنجشەممە", "هەینی"],
     toast_saved_local: "زانیارییەکان پاشەکەوت کران.",
     toast_loaded_local: "زانیارییەکان گەڕێنرانەوە.",
@@ -1888,10 +1888,14 @@ function renderDistributionTable(filter = '') {
     const filteredTeachers = schedule.teachers.filter(t => t.name.toLowerCase().includes(filter.toLowerCase()));
 
     if (tableViewMode === 'ledger') {
-        let allSubjects = [...new Set([...PREDEFINED_SUBJECTS, ...new Set(schedule.teachers.flatMap(t => (t.subjects || []).map(s => s.name)))])];
+        let rawSubjects = [...PREDEFINED_SUBJECTS, ...schedule.teachers.flatMap(t => (t.subjects || []).map(s => s.name))];
+        let allSubjects = [...new Set(rawSubjects.map(s => translateSubjectName(s)))];
         const schoolType = schedule?.settings?.milakData?.schoolType || 'سه‌ره‌تایی 1-6';
         if (schoolType.includes('سه‌ره‌تایی') || schoolType.includes('سەرەتایی') || schoolType.includes('ئامادەیی') || schoolType.includes('ئامادهیی') || schoolType.includes('الابتدائية') || schoolType.includes('اعدادية')) {
-            allSubjects = allSubjects.filter(s => SUBJECT_MAP[s.trim()] !== 10 && SUBJECT_MAP[s.trim()] !== 11);
+            allSubjects = allSubjects.filter(s => {
+                const idx = SUBJECT_MAP[s.trim()];
+                return idx !== 10 && idx !== 11;
+            });
         }
 
         const subjectTotals = {};
@@ -1926,7 +1930,13 @@ function renderDistributionTable(filter = '') {
             const subjectCells = allSubjects.map(sub => {
                 let count = 0;
                 schedule.columns.forEach(col => {
-                    count += Number(tItem.classes?.[col]?.[sub] || 0);
+                    if (tItem.classes?.[col]) {
+                        for (const [sName, sVal] of Object.entries(tItem.classes[col])) {
+                            if (translateSubjectName(sName) === sub) {
+                                count += Number(sVal || 0);
+                            }
+                        }
+                    }
                 });
                 totalAssigned += count;
                 subjectTotals[sub] += count;
@@ -3334,7 +3344,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Unchanged Functions (Statistics & Nisab Rendering)
 function getGradeFromClassName(className) { if (!className) return null; const match = className.match(/[٠-٩0-9]+/); return match ? match[0] : null; }
-function renderNisabTab() { const container = document.getElementById('nisab-tab-pane'); const schedule = allSchedules[activeScheduleName]; const teacherSubjects = new Set(schedule.teachers.flatMap(t => (t.subjects || []).map(s => s.name))); let allSubjects = [...new Set([...PREDEFINED_SUBJECTS, ...teacherSubjects])]; const schoolType = schedule?.settings?.milakData?.schoolType || 'سه‌ره‌تایی 1-6'; if (schoolType.includes('سه‌ره‌تایی') || schoolType.includes('سەرەتایی') || schoolType.includes('ئامادەیی') || schoolType.includes('ئامادهیی') || schoolType.includes('الابتدائية') || schoolType.includes('اعدادية')) { allSubjects = allSubjects.filter(s => SUBJECT_MAP[s.trim()] !== 10 && SUBJECT_MAP[s.trim()] !== 11); } const allGrades = [...new Set(schedule.columns.map(getGradeFromClassName).filter(Boolean))].sort((a, b) => parseInt(a) - parseInt(b)); if (allGrades.length === 0) { container.innerHTML = `<div class="empty-state"><i class="fas fa-tasks fa-3x mb-3"></i><h5>${t('tab_nisab')}</h5><p>${t('empty_table_desc')}</p></div>`; return; } let tableHTML = `<div class="d-flex justify-content-between align-items-center my-3"><h5 class="mb-0">${t('tab_nisab')}</h5><button class="btn btn-info btn-sm" onclick="applyNisab()"><i class="fas fa-magic me-2"></i>${t('btn_auto_distribute')}</button></div><div class="table-responsive"><table class="table table-bordered nisab-table"><thead class="table-light"><tr><th>${t('col_subject')} / ${t('col_class')}</th>${allGrades.map(g => `<th>${t('col_class')} ${g}</th>`).join('')}</tr></thead><tbody>${allSubjects.map(s => `<tr><td class="fw-bold">${s}</td>${allGrades.map(g => `<td><input type="number" class="form-control form-control-sm mx-auto" min="0" data-subject="${s}" data-grade="${g}" value="${schedule.nisab?.[s]?.[g] || ''}" onchange="saveNisabValue(this)"></td>`).join('')}</tr>`).join('')}</tbody></table></div>`; container.innerHTML = tableHTML; }
+function renderNisabTab() { 
+    const container = document.getElementById('nisab-tab-pane'); 
+    const schedule = allSchedules[activeScheduleName]; 
+    let rawSubjects = [...PREDEFINED_SUBJECTS, ...schedule.teachers.flatMap(t => (t.subjects || []).map(s => s.name))];
+    let allSubjects = [...new Set(rawSubjects.map(s => translateSubjectName(s)))];
+    
+    const schoolType = schedule?.settings?.milakData?.schoolType || 'سه‌ره‌تایی 1-6'; 
+    if (schoolType.includes('سه‌ره‌تایی') || schoolType.includes('سەرەتایی') || schoolType.includes('ئامادەیی') || schoolType.includes('ئامادهیی') || schoolType.includes('الابتدائية') || schoolType.includes('اعدادية')) { 
+        allSubjects = allSubjects.filter(s => { const idx = SUBJECT_MAP[s.trim()]; return idx !== 10 && idx !== 11; }); 
+    } 
+    const allGrades = [...new Set(schedule.columns.map(getGradeFromClassName).filter(Boolean))].sort((a, b) => parseInt(a) - parseInt(b)); 
+    if (allGrades.length === 0) { 
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-tasks fa-3x mb-3"></i><h5>${t('tab_nisab')}</h5><p>${t('empty_table_desc')}</p></div>`; 
+        return; 
+    } 
+    let tableHTML = `<div class="d-flex justify-content-between align-items-center my-3"><h5 class="mb-0">${t('tab_nisab')}</h5><button class="btn btn-info btn-sm" onclick="applyNisab()"><i class="fas fa-magic me-2"></i>${t('btn_auto_distribute')}</button></div><div class="table-responsive"><table class="table table-bordered nisab-table"><thead class="table-light"><tr><th>${t('col_subject')} / ${t('col_class')}</th>${allGrades.map(g => `<th>${t('col_class')} ${g}</th>`).join('')}</tr></thead><tbody>${allSubjects.map(s => {
+        return `<tr><td class="fw-bold">${s}</td>${allGrades.map(g => {
+            let nisabVal = '';
+            if (schedule.nisab) {
+                for (const raw of Object.keys(schedule.nisab)) {
+                    if (translateSubjectName(raw) === s && schedule.nisab[raw]?.[g]) {
+                        nisabVal = schedule.nisab[raw][g];
+                        break;
+                    }
+                }
+            }
+            return `<td><input type="number" class="form-control form-control-sm mx-auto" min="0" data-subject="${s}" data-grade="${g}" value="${nisabVal}" onchange="saveNisabValue(this)"></td>`;
+        }).join('')}</tr>`;
+    }).join('')}</tbody></table></div>`; 
+    container.innerHTML = tableHTML; 
+}
 function saveNisabValue(input) { const schedule = allSchedules[activeScheduleName]; const { subject, grade } = input.dataset; const value = parseInt(input.value); if (!schedule.nisab[subject]) schedule.nisab[subject] = {}; if (value > 0) schedule.nisab[subject][grade] = value; else delete schedule.nisab[subject][grade]; saveData(); }
 async function applyNisab() {
     const { isConfirmed } = await Swal.fire({
@@ -3349,18 +3389,37 @@ async function applyNisab() {
         const schedule = allSchedules[activeScheduleName];
         let successLog = [];
         let warningLog = [];
-        for (const subject in schedule.nisab) {
-            for (const grade in schedule.nisab[subject]) {
-                const periods = schedule.nisab[subject][grade];
+        let unifiedNisab = {};
+        for (const rawSub in schedule.nisab) {
+            const translatedSub = translateSubjectName(rawSub);
+            if (!unifiedNisab[translatedSub]) unifiedNisab[translatedSub] = {};
+            for (const grade in schedule.nisab[rawSub]) {
+                unifiedGradesVal = Number(schedule.nisab[rawSub][grade]);
+                unifiedNisab[translatedSub][grade] = Math.max(unifiedNisab[translatedSub][grade] || 0, unifiedGradesVal);
+            }
+        }
+        
+        for (const subject in unifiedNisab) {
+            for (const grade in unifiedNisab[subject]) {
+                const periods = unifiedNisab[subject][grade];
                 if (!periods || periods <= 0) continue;
-                let teacher = schedule.teachers.find(t => t.specialization === subject && t.subjects.some(s => s.name === subject)) || schedule.teachers.find(t => t.subjects.some(s => s.name === subject));
+                let teacher = schedule.teachers.find(t => translateSubjectName(t.specialization) === subject && (t.subjects || []).some(s => translateSubjectName(s.name) === subject)) || schedule.teachers.find(t => (t.subjects || []).some(s => translateSubjectName(s.name) === subject));
                 if (!teacher) {
                     warningLog.push('- ' + t('nisab_no_teacher', 'هیچ ماموستایەک نەهاتە دیتن بۆ بابەتا "{subject}".').replace('{subject}', subject));
                     continue;
                 }
                 const targetClasses = schedule.columns.filter(c => getGradeFromClassName(c) === grade);
                 targetClasses.forEach(className => {
-                    if (!schedule.teachers.some(t => t.classes?.[className]?.[subject] > 0)) {
+                    let hasDistributed = false;
+                    schedule.teachers.forEach(t => {
+                        if (t.classes?.[className]) {
+                            for (const sN of Object.keys(t.classes[className])) {
+                                if (translateSubjectName(sN) === subject && t.classes[className][sN] > 0) hasDistributed = true;
+                            }
+                        }
+                    });
+                    
+                    if (!hasDistributed) {
                         teacher.classes = teacher.classes || {};
                         teacher.classes[className] = teacher.classes[className] || {};
                         teacher.classes[className][subject] = periods;
@@ -3387,7 +3446,65 @@ async function applyNisab() {
     }
 }
 function renderStatisticsTab() {
-    const container = document.getElementById('statistics-tab-pane'); const schedule = allSchedules[activeScheduleName]; if (!schedule || schedule.teachers.length === 0 || schedule.columns.length === 0) { container.innerHTML = '<div class="p-4"><div class="alert alert-warning">هیچ داتایه‌ك نینه‌ بۆ نیشاندانێ. پێدڤیه‌ ماموستا و پولان و وانان دابه‌ش بكه‌ی.</div></div>'; return; } let allSubjects = [...new Set([...PREDEFINED_SUBJECTS, ...new Set(schedule.teachers.flatMap(t => (t.subjects || []).map(s => s.name)))])]; const schoolType = schedule?.settings?.milakData?.schoolType || 'سه‌ره‌تایی 1-6'; if (schoolType.includes('سه‌ره‌تایی') || schoolType.includes('سەرەتایی') || schoolType.includes('ئامادەیی') || schoolType.includes('ئامادهیی') || schoolType.includes('الابتدائية') || schoolType.includes('اعدادية')) { allSubjects = allSubjects.filter(s => SUBJECT_MAP[s.trim()] !== 10 && SUBJECT_MAP[s.trim()] !== 11); } const subjectStatus = allSubjects.map(subject => { const required = Object.entries(schedule.nisab[subject] || {}).reduce((sum, [grade, periods]) => sum + (Number(periods) * schedule.columns.filter(c => getGradeFromClassName(c) === grade).length), 0); const distributed = schedule.teachers.reduce((sum, t) => sum + schedule.columns.reduce((subSum, col) => subSum + Number(t.classes?.[col]?.[subject] || 0), 0), 0); return { name: subject, required, distributed }; }).filter(s => s.required > 0 || s.distributed > 0); const totalNisabRequired = subjectStatus.reduce((sum, s) => sum + s.required, 0); const totalDistributed = subjectStatus.reduce((sum, s) => sum + s.distributed, 0); const classDetails = schedule.columns.reduce((acc, colName) => { acc[colName] = { total: 0, subjects: {} }; schedule.teachers.forEach(t => { if (t.classes?.[colName]) { for (const subject in t.classes[colName]) { const periods = t.classes[colName][subject]; acc[colName].total += periods; acc[colName].subjects[subject] = (acc[colName].subjects[subject] || 0) + periods; } } }); return acc; }, {}); let distributionDetails = []; schedule.teachers.forEach(t => { for (const cN in t.classes) { for (const sN in t.classes[cN]) { if (t.classes[cN][sN] > 0) { distributionDetails.push({ className: cN, subjectName: sN, teacherName: t.name, periods: t.classes[cN][sN] }); } } } }); distributionDetails.sort((a, b) => a.className.localeCompare(b.className) || a.subjectName.localeCompare(b.subjectName)); const progressPercentage = totalNisabRequired > 0 ? (totalDistributed / totalNisabRequired) * 100 : 0;
+    const container = document.getElementById('statistics-tab-pane'); const schedule = allSchedules[activeScheduleName]; if (!schedule || schedule.teachers.length === 0 || schedule.columns.length === 0) { container.innerHTML = '<div class="p-4"><div class="alert alert-warning">هیچ داتایه‌ك نینه‌ بۆ نیشاندانێ. پێدڤیه‌ ماموستا و پولان و وانان دابه‌ش بكه‌ی.</div></div>'; return; }
+    let rawSubjects = [...PREDEFINED_SUBJECTS, ...schedule.teachers.flatMap(t => (t.subjects || []).map(s => s.name))];
+    let allSubjects = [...new Set(rawSubjects.map(s => translateSubjectName(s)))];
+    const schoolType = schedule?.settings?.milakData?.schoolType || 'سه‌ره‌تایی 1-6';
+    if (schoolType.includes('سه‌ره‌تایی') || schoolType.includes('سەرەتایی') || schoolType.includes('ئامادەیی') || schoolType.includes('ئامادهیی') || schoolType.includes('الابتدائية') || schoolType.includes('اعدادية')) { 
+        allSubjects = allSubjects.filter(s => { const idx = SUBJECT_MAP[s.trim()]; return idx !== 10 && idx !== 11; }); 
+    } 
+    const subjectStatus = allSubjects.map(subject => { 
+        let required = 0;
+        if (schedule.nisab) {
+            const unifiedGrades = {};
+            for (const [rawSub, grades] of Object.entries(schedule.nisab)) {
+                if (translateSubjectName(rawSub) === subject) {
+                    for (const [grade, periods] of Object.entries(grades)) {
+                        unifiedGrades[grade] = Math.max(unifiedGrades[grade] || 0, Number(periods));
+                    }
+                }
+            }
+            required = Object.entries(unifiedGrades).reduce((sum, [grade, periods]) => sum + (periods * schedule.columns.filter(c => getGradeFromClassName(c) === grade).length), 0);
+        }
+        const distributed = schedule.teachers.reduce((sum, t) => sum + schedule.columns.reduce((subSum, col) => {
+            let colSum = 0;
+            if (t.classes?.[col]) {
+                for (const [sName, sVal] of Object.entries(t.classes[col])) {
+                    if (translateSubjectName(sName) === subject) colSum += Number(sVal || 0);
+                }
+            }
+            return subSum + colSum;
+        }, 0), 0); 
+        return { name: subject, required, distributed }; 
+    }).filter(s => s.required > 0 || s.distributed > 0); 
+    const totalNisabRequired = subjectStatus.reduce((sum, s) => sum + s.required, 0); 
+    const totalDistributed = subjectStatus.reduce((sum, s) => sum + s.distributed, 0); 
+    const classDetails = schedule.columns.reduce((acc, colName) => { 
+        acc[colName] = { total: 0, subjects: {} }; 
+        schedule.teachers.forEach(t => { 
+            if (t.classes?.[colName]) { 
+                for (const subject in t.classes[colName]) { 
+                    const periods = t.classes[colName][subject];
+                    const tSub = translateSubjectName(subject);
+                    acc[colName].total += periods; 
+                    acc[colName].subjects[tSub] = (acc[colName].subjects[tSub] || 0) + periods; 
+                } 
+            } 
+        }); 
+        return acc; 
+    }, {}); 
+    let distributionDetails = []; 
+    schedule.teachers.forEach(t => { 
+        for (const cN in t.classes) { 
+            for (const sN in t.classes[cN]) { 
+                if (t.classes[cN][sN] > 0) { 
+                    distributionDetails.push({ className: cN, subjectName: translateSubjectName(sN), teacherName: t.name, periods: t.classes[cN][sN] }); 
+                } 
+            } 
+        } 
+    }); 
+    distributionDetails.sort((a, b) => a.className.localeCompare(b.className) || a.subjectName.localeCompare(b.subjectName)); 
+    const progressPercentage = totalNisabRequired > 0 ? (totalDistributed / totalNisabRequired) * 100 : 0;
     const selectHTML = `
         <div class="card p-3 mb-4 shadow-sm border border-light-subtle rounded-3 bg-white no-print">
             <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -3657,18 +3774,31 @@ function renderSubjectTracker(subjectName) {
         let assignedTeacher = null;
         let assignedPeriods = 0;
         schedule.teachers.forEach(t => {
-            if (t.classes?.[colName]?.[subjectName] > 0) {
-                assignedTeacher = t.name;
-                assignedPeriods = t.classes[colName][subjectName];
+            if (t.classes?.[colName]) {
+                for (const [sName, sVal] of Object.entries(t.classes[colName])) {
+                    if (translateSubjectName(sName) === subjectName && sVal > 0) {
+                        assignedTeacher = t.name;
+                        assignedPeriods += Number(sVal);
+                    }
+                }
             }
         });
 
-        const isRequiredByNisab = schedule.nisab?.[subjectName]?.[grade] > 0;
+        let requiredPeriods = 0;
+        if (schedule.nisab) {
+            for (const sName of Object.keys(schedule.nisab)) {
+                if (translateSubjectName(sName) === subjectName && schedule.nisab[sName][grade] > 0) {
+                    requiredPeriods = Math.max(requiredPeriods, Number(schedule.nisab[sName][grade]));
+                }
+            }
+        }
+        
+        const isRequiredByNisab = requiredPeriods > 0;
 
         if (assignedTeacher) {
             distributedClasses.push({ className: colName, teacherName: assignedTeacher, periods: assignedPeriods });
         } else if (isRequiredByNisab) {
-            notDistributedClasses.push({ className: colName, requiredPeriods: schedule.nisab[subjectName][grade] });
+            notDistributedClasses.push({ className: colName, requiredPeriods: requiredPeriods });
         }
     });
 
@@ -5588,6 +5718,12 @@ function printMasterTeacherTimetable(pageOrientation = 'landscape') {
 // --- MILAK FORM TAB (فۆرما ڕێکخستنا ميلاکێ قوتابخانێ) ---
 // ============================================================
 
+let milakViewModeBorderless = true;
+function toggleMilakViewMode() {
+    milakViewModeBorderless = !milakViewModeBorderless;
+    initMilakTab();
+}
+
 function initMilakTab() {
     const schedule = allSchedules[activeScheduleName];
     if (!schedule) return;
@@ -5621,6 +5757,7 @@ function renderMilakTab() {
     if (!container) return;
 
     const schedule = allSchedules[activeScheduleName];
+    const milakInputClass = milakViewModeBorderless ? "border-0 bg-transparent shadow-none" : "";
     if (!schedule) { container.innerHTML = '<p class="text-muted p-4">هیچ خشتەیەک نەدۆزرا.</p>'; return; }
 
     const md = schedule.settings.milakData || {};
@@ -5700,16 +5837,16 @@ function renderMilakTab() {
         staffRowsHTML += `
         <tr>
             <td class="fw-bold bg-light" style="font-size:0.85rem;">${s.label}</td>
-            <td><input type="text" class="form-control form-control-sm p-0 px-1" value="${nameVal}" oninput="saveMilakField('${s.prefix}_name', this.value)" placeholder="${t('full_name_placeholder', 'ناڤێ سێ قولى...')}"></td>
+            <td><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${nameVal}" oninput="saveMilakField('${s.prefix}_name', this.value)" placeholder="${t('full_name_placeholder', 'ناڤێ سێ قولى...')}"></td>
             <td>
-                <select class="form-select form-select-sm p-0 px-1" onchange="saveMilakField('${s.prefix}_gender', this.value)">
+                <select class="form-select form-select-sm ${milakInputClass} p-0 px-1" onchange="saveMilakField('${s.prefix}_gender', this.value)">
                     <option value="" ${!genderVal ? 'selected' : ''}>-</option>
                     <option value="نێر" ${genderVal === 'نێر' ? 'selected' : ''}>${t('male_opt', 'نێر (ذكر)')}</option>
                     <option value="مێ" ${genderVal === 'مێ' ? 'selected' : ''}>${t('female_opt', 'مێ (أنثى)')}</option>
                 </select>
             </td>
             <td>
-                <select class="form-select form-select-sm p-0 px-1" onchange="saveMilakField('${s.prefix}_cert', this.value)">
+                <select class="form-select form-select-sm ${milakInputClass} p-0 px-1" onchange="saveMilakField('${s.prefix}_cert', this.value)">
                     <option value="" ${!certVal ? 'selected' : ''}>-</option>
                     <option value="دبلوم" ${certVal === 'دبلوم' ? 'selected' : ''}>${t('diploma_opt', 'دبلوم')}</option>
                     <option value="بكالوريوس" ${certVal === 'بكالوريوس' ? 'selected' : ''}>${t('bachelor_opt', 'بكالوريوس')}</option>
@@ -5717,11 +5854,11 @@ function renderMilakTab() {
                     <option value="دكتورا" ${certVal === 'دكتورا' ? 'selected' : ''}>${t('phd_opt', 'دكتورا (دكتوراه)')}</option>
                 </select>
             </td>
-            <td><input type="text" class="form-control form-control-sm p-0 px-1" value="${specVal}" oninput="saveMilakField('${s.prefix}_spec', this.value)" placeholder="${t('spec_placeholder', 'بسپورى...')}"></td>
-            <td><input type="number" class="form-control form-control-sm p-0 px-1 text-center" value="${lessonsVal}" oninput="saveMilakField('${s.prefix}_lessons', this.value)"></td>
-            <td><input type="text" class="form-control form-control-sm p-0 px-1 text-center" value="${birthVal}" oninput="saveMilakField('${s.prefix}_birth', this.value)" placeholder="${t('residence_placeholder', 'جهێ ئاكنجيبوونێ...')}"></td>
-            <td><input type="text" class="form-control form-control-sm p-0 px-1 text-center" value="${phoneVal}" oninput="saveMilakField('${s.prefix}_phone', this.value)" placeholder="${t('mobile_placeholder', 'موبایل...')}"></td>
-            <td><input type="text" class="form-control form-control-sm p-0 px-1" value="${notesVal}" oninput="saveMilakField('${s.prefix}_notes', this.value)" placeholder="..."></td>
+            <td><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${specVal}" oninput="saveMilakField('${s.prefix}_spec', this.value)" placeholder="${t('spec_placeholder', 'بسپورى...')}"></td>
+            <td><input type="number" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${lessonsVal}" oninput="saveMilakField('${s.prefix}_lessons', this.value)"></td>
+            <td><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${birthVal}" oninput="saveMilakField('${s.prefix}_birth', this.value)" placeholder="${t('residence_placeholder', 'جهێ ئاكنجيبوونێ...')}"></td>
+            <td><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${phoneVal}" oninput="saveMilakField('${s.prefix}_phone', this.value)" placeholder="${t('mobile_placeholder', 'موبایل...')}"></td>
+            <td><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${notesVal}" oninput="saveMilakField('${s.prefix}_notes', this.value)" placeholder="..."></td>
         </tr>`;
     });
 
@@ -5739,9 +5876,9 @@ function renderMilakTab() {
         studentRowsHTML += `
         <tr>
             <td class="fw-bold bg-light">${g}</td>
-            <td><input type="number" class="form-control form-control-sm text-center" value="${sectionsVal}" oninput="saveMilakField('grade_${g}_sections', this.value); recalculateMilakTotals();"></td>
-            <td><input type="number" class="form-control form-control-sm text-center text-center-boys-${g}" value="${boysVal}" oninput="saveMilakField('grade_${g}_boys', this.value); recalculateMilakTotals();"></td>
-            <td><input type="number" class="form-control form-control-sm text-center text-center-girls-${g}" value="${girlsVal}" oninput="saveMilakField('grade_${g}_girls', this.value); recalculateMilakTotals();"></td>
+            <td><input type="number" class="form-control form-control-sm ${milakInputClass} text-center" value="${sectionsVal}" oninput="saveMilakField('grade_${g}_sections', this.value); recalculateMilakTotals();"></td>
+            <td><input type="number" class="form-control form-control-sm ${milakInputClass} text-center text-center-boys-${g}" value="${boysVal}" oninput="saveMilakField('grade_${g}_boys', this.value); recalculateMilakTotals();"></td>
+            <td><input type="number" class="form-control form-control-sm ${milakInputClass} text-center text-center-girls-${g}" value="${girlsVal}" oninput="saveMilakField('grade_${g}_girls', this.value); recalculateMilakTotals();"></td>
             <td id="grade_${g}_total" class="fw-bold" style="background-color: #fcf8e3;">${(parseInt(boysVal) || 0) + (parseInt(girlsVal) || 0)}</td>
         </tr>`;
     }
@@ -5826,12 +5963,12 @@ function renderMilakTab() {
             <td class="text-center col-cert" style="font-size:0.8rem; border:1px solid #adb5bd;">${cert}</td>
             <td class="text-center col-spec" style="font-size:0.8rem; border:1px solid #adb5bd;">${spec}</td>
             <td class="p-0 col-birth" style="border:1px solid #adb5bd;">
-                <input type="text" class="form-control form-control-sm border-0 bg-transparent text-center p-0" style="font-size:0.75rem;" 
+                <input type="text" class="form-control form-control-sm ${milakInputClass} text-center p-0" style="font-size:0.75rem;" 
                     value="${fv('teacher_birth_' + teacher.id, '')}" 
                     oninput="saveMilakField('teacher_birth_${teacher.id}', this.value)">
             </td>
             <td class="p-0 col-phone" style="border:1px solid #adb5bd;">
-                <input type="text" class="form-control form-control-sm border-0 bg-transparent text-center p-0" style="font-size:0.75rem;" 
+                <input type="text" class="form-control form-control-sm ${milakInputClass} text-center p-0" style="font-size:0.75rem;" 
                     value="${fv('teacher_phone_' + teacher.id, phone)}" 
                     oninput="saveMilakField('teacher_phone_${teacher.id}', this.value)">
             </td>
@@ -5880,16 +6017,16 @@ function renderMilakTab() {
         leaveRowsHTML += `
         <tr>
             <td class="text-center col-seq">${i + 1}</td>
-            <td class="col-name"><input type="text" class="form-control form-control-sm p-0 px-1" value="${nameVal}" oninput="saveMilakTableRow('milakLeaveData',${i},'name',this.value)" placeholder="${t('full_name_placeholder', 'ناڤێ سێ قولى...')}"></td>
+            <td class="col-name"><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${nameVal}" oninput="saveMilakTableRow('milakLeaveData',${i},'name',this.value)" placeholder="${t('full_name_placeholder', 'ناڤێ سێ قولى...')}"></td>
             <td class="col-gender">
-                <select class="form-select form-select-sm p-0 px-1" onchange="saveMilakTableRow('milakLeaveData',${i},'gender',this.value)">
+                <select class="form-select form-select-sm ${milakInputClass} p-0 px-1" onchange="saveMilakTableRow('milakLeaveData',${i},'gender',this.value)">
                     <option value="" ${!genderVal ? 'selected' : ''}>-</option>
                     <option value="نێر" ${genderVal === 'نێر' ? 'selected' : ''}>${t('male_opt', 'نێر (ذكر)')}</option>
                     <option value="مێ" ${genderVal === 'مێ' ? 'selected' : ''}>${t('female_opt', 'مێ (أنثى)')}</option>
                 </select>
             </td>
             <td class="col-cert">
-                <select class="form-select form-select-sm p-0 px-1" onchange="saveMilakTableRow('milakLeaveData',${i},'cert',this.value)">
+                <select class="form-select form-select-sm ${milakInputClass} p-0 px-1" onchange="saveMilakTableRow('milakLeaveData',${i},'cert',this.value)">
                     <option value="" ${!certVal ? 'selected' : ''}>-</option>
                     <option value="دبلوم" ${certVal === 'دبلوم' ? 'selected' : ''}>${t('diploma_opt', 'دبلوم')}</option>
                     <option value="بكالوريوس" ${certVal === 'بكالوريوس' ? 'selected' : ''}>${t('bachelor_opt', 'بكالوريوس')}</option>
@@ -5897,11 +6034,11 @@ function renderMilakTab() {
                     <option value="دكتورا" ${certVal === 'دكتورا' ? 'selected' : ''}>${t('phd_opt', 'دكتورا (دكتوراه)')}</option>
                 </select>
             </td>
-            <td class="col-spec"><input type="text" class="form-control form-control-sm p-0 px-1" value="${specVal}" oninput="saveMilakTableRow('milakLeaveData',${i},'spec',this.value)" placeholder="${t('spec_placeholder', 'بسپورى...')}"></td>
-            <td class="col-leave-type"><input type="text" class="form-control form-control-sm p-0 px-1" value="${lr.leaveType || ''}" oninput="saveMilakTableRow('milakLeaveData',${i},'leaveType',this.value)" placeholder="${t('leave_type_placeholder', 'جورێ موله‌تێ...')}"></td>
-            <td class="col-leave-from"><input type="text" class="form-control form-control-sm p-0 px-1 text-center" value="${lr.leaveFrom || ''}" oninput="saveMilakTableRow('milakLeaveData',${i},'leaveFrom',this.value)" placeholder="${t('from_placeholder', 'ژ...')}"></td>
-            <td class="col-leave-to"><input type="text" class="form-control form-control-sm p-0 px-1 text-center" value="${lr.leaveTo || ''}" oninput="saveMilakTableRow('milakLeaveData',${i},'leaveTo',this.value)" placeholder="${t('to_placeholder', 'تا...')}"></td>
-            <td class="col-admin-order"><input type="text" class="form-control form-control-sm p-0 px-1" value="${lr.adminOrder || ''}" oninput="saveMilakTableRow('milakLeaveData',${i},'adminOrder',this.value)" placeholder="${t('admin_order_placeholder', 'ژمارا فه‌رمانا كارگێرى...')}"></td>
+            <td class="col-spec"><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${specVal}" oninput="saveMilakTableRow('milakLeaveData',${i},'spec',this.value)" placeholder="${t('spec_placeholder', 'بسپورى...')}"></td>
+            <td class="col-leave-type"><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${lr.leaveType || ''}" oninput="saveMilakTableRow('milakLeaveData',${i},'leaveType',this.value)" placeholder="${t('leave_type_placeholder', 'جورێ موله‌تێ...')}"></td>
+            <td class="col-leave-from"><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${lr.leaveFrom || ''}" oninput="saveMilakTableRow('milakLeaveData',${i},'leaveFrom',this.value)" placeholder="${t('from_placeholder', 'ژ...')}"></td>
+            <td class="col-leave-to"><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${lr.leaveTo || ''}" oninput="saveMilakTableRow('milakLeaveData',${i},'leaveTo',this.value)" placeholder="${t('to_placeholder', 'تا...')}"></td>
+            <td class="col-admin-order"><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${lr.adminOrder || ''}" oninput="saveMilakTableRow('milakLeaveData',${i},'adminOrder',this.value)" placeholder="${t('admin_order_placeholder', 'ژمارا فه‌رمانا كارگێرى...')}"></td>
         </tr>`;
     }
 
@@ -5913,12 +6050,12 @@ function renderMilakTab() {
         surplusRowsHTML += `
         <tr>
             <td class="text-center">${i + 1}</td>
-            <td><input type="text" class="form-control form-control-sm p-0 px-1" value="${sr.subject || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'subject',this.value)" placeholder="${t('subject_placeholder', 'بابەت...')}"></td>
-            <td><input type="number" class="form-control form-control-sm p-0 px-1 text-center" value="${sr.existing || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'existing',this.value)"></td>
-            <td><input type="number" class="form-control form-control-sm p-0 px-1 text-center" value="${sr.needed || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'needed',this.value)"></td>
-            <td><input type="number" class="form-control form-control-sm p-0 px-1 text-center" value="${sr.surplus || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'surplus',this.value)"></td>
-            <td><input type="number" class="form-control form-control-sm p-0 px-1 text-center" value="${sr.deficit || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'deficit',this.value)"></td>
-            <td><input type="text" class="form-control form-control-sm p-0 px-1" value="${sr.notes || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'notes',this.value)" placeholder="${t('notes_placeholder', 'تێبینی...')}"></td>
+            <td><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${sr.subject || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'subject',this.value)" placeholder="${t('subject_placeholder', 'بابەت...')}"></td>
+            <td><input type="number" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${sr.existing || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'existing',this.value)"></td>
+            <td><input type="number" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${sr.needed || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'needed',this.value)"></td>
+            <td><input type="number" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${sr.surplus || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'surplus',this.value)"></td>
+            <td><input type="number" class="form-control form-control-sm ${milakInputClass} p-0 px-1 text-center" value="${sr.deficit || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'deficit',this.value)"></td>
+            <td><input type="text" class="form-control form-control-sm ${milakInputClass} p-0 px-1" value="${sr.notes || ''}" oninput="saveMilakTableRow('milakSurplusData',${i},'notes',this.value)" placeholder="${t('notes_placeholder', 'تێبینی...')}"></td>
         </tr>`;
     }
 
@@ -5929,12 +6066,13 @@ function renderMilakTab() {
     <div class="milak-form-container p-2 p-md-3">
         <!-- Top Action Toolbar -->
         <div class="d-flex flex-wrap justify-content-center justify-content-md-end gap-2 mb-3 no-print">
+            <button class="btn btn-secondary btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm flex-fill flex-md-grow-0" onclick="toggleMilakViewMode()"><i class="fas fa-exchange-alt me-1"></i>تغيير العرض (گۆڕینی شێوەی پیشاندان)</button>
             <button class="btn btn-success btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm flex-fill flex-md-grow-0" onclick="exportMilakToExcel()" style="background-color: #28a745;"><i class="fas fa-file-excel me-1"></i>تصدير إكسل (Excel)</button>
             <button class="btn btn-info btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm flex-fill flex-md-grow-0" onclick="downloadMilakHTML()" style="background-color: #17a2b8;"><i class="fas fa-file-code me-1"></i>تنزيل HTML</button>
             <button class="btn btn-primary btn-sm fw-bold px-3 py-1 text-white border-0 shadow-sm flex-fill flex-md-grow-0" onclick="printMilakForm()" style="background-color: #007bff;"><i class="fas fa-print me-1"></i>چاپكرن (طباعة الاستمارة)</button>
         </div>
 
-        <div id="milakFormPrintArea">
+        <div id="milakFormPrintArea" class="${milakViewModeBorderless ? 'milak-borderless-mode' : ''}">
             <!-- Print Header -->
         <div class="text-center mb-3 border-bottom pb-3">
             <div class="row align-items-center text-center mb-2 g-3">
@@ -6019,11 +6157,11 @@ function renderMilakTab() {
                         </thead>
                         <tbody>
                             <tr>
-                                <td><input type="number" class="form-control form-control-sm text-center" value="${fv('adminRooms')}" oninput="saveMilakField('adminRooms', this.value)"></td>
-                                <td><input type="number" class="form-control form-control-sm text-center" value="${fv('classRooms')}" oninput="saveMilakField('classRooms', this.value)"></td>
-                                <td><input type="number" class="form-control form-control-sm text-center" value="${fv('labs')}" oninput="saveMilakField('labs', this.value)"></td>
+                                <td><input type="number" class="form-control form-control-sm ${milakInputClass} text-center" value="${fv('adminRooms')}" oninput="saveMilakField('adminRooms', this.value)"></td>
+                                <td><input type="number" class="form-control form-control-sm ${milakInputClass} text-center" value="${fv('classRooms')}" oninput="saveMilakField('classRooms', this.value)"></td>
+                                <td><input type="number" class="form-control form-control-sm ${milakInputClass} text-center" value="${fv('labs')}" oninput="saveMilakField('labs', this.value)"></td>
                                 <td>
-                                    <select class="form-select form-select-sm text-center" onchange="saveMilakField('hasHall', this.value)">
+                                    <select class="form-select form-select-sm ${milakInputClass} text-center" onchange="saveMilakField('hasHall', this.value)">
                                         <option value="" ${!fv('hasHall') ? 'selected' : ''}>${t('select_option')}</option>
                                         <option value="بەڵێ" ${fv('hasHall') === 'بەڵێ' ? 'selected' : ''}>بەڵێ</option>
                                         <option value="نەخێر" ${fv('hasHall') === 'نەخێر' ? 'selected' : ''}>نەخێر</option>
@@ -6463,20 +6601,26 @@ function printMilakForm() {
         const span = document.createElement('span');
         const val = cleanPrintText(input.value || '');
         span.textContent = val;
-        span.style.cssText = 'display:block; width:100%; min-height:26px; line-height:22px; background-color:#fff !important; border:1px solid #ced4da !important; border-radius:20px !important; padding:0 8px !important; font-size:0.75rem !important; text-align:center !important; -webkit-print-color-adjust:exact !important; color-adjust:exact !important;';
+        const isInsideTable = input.closest('table') !== null;
+        const borderStyle = milakViewModeBorderless ? (isInsideTable ? 'border:none !important; background-color:transparent !important;' : 'border:1px solid #adb5bd !important; border-radius:0 !important; background-color:transparent !important;') : 'background-color:#fff !important; border:1px solid #ced4da !important; border-radius:20px !important;';
+        span.style.cssText = `display:block; width:100%; min-height:26px; line-height:22px; ${borderStyle} padding:0 8px !important; font-size:0.75rem !important; text-align:center !important; -webkit-print-color-adjust:exact !important; color-adjust:exact !important;`;
         input.parentNode.replaceChild(span, input);
     });
     clone.querySelectorAll('select').forEach(select => {
         const span = document.createElement('span');
         const val = cleanPrintText(select.options[select.selectedIndex]?.text || '');
         span.textContent = val;
-        span.style.cssText = 'display:block; width:100%; min-height:26px; line-height:22px; background-color:#fff !important; border:1px solid #ced4da !important; border-radius:20px !important; padding:0 8px !important; font-size:0.75rem !important; text-align:center !important; -webkit-print-color-adjust:exact !important; color-adjust:exact !important;';
+        const isInsideTable = select.closest('table') !== null;
+        const borderStyle = milakViewModeBorderless ? (isInsideTable ? 'border:none !important; background-color:transparent !important;' : 'border:1px solid #adb5bd !important; border-radius:0 !important; background-color:transparent !important;') : 'background-color:#fff !important; border:1px solid #ced4da !important; border-radius:20px !important;';
+        span.style.cssText = `display:block; width:100%; min-height:26px; line-height:22px; ${borderStyle} padding:0 8px !important; font-size:0.75rem !important; text-align:center !important; -webkit-print-color-adjust:exact !important; color-adjust:exact !important;`;
         select.parentNode.replaceChild(span, select);
     });
     clone.querySelectorAll('textarea').forEach(ta => {
         const div = document.createElement('div');
         div.textContent = cleanPrintText(ta.value || '');
-        div.style.cssText = 'display:block; width:100%; min-height:60px; background-color:#fff !important; border:1px solid #ced4da !important; border-radius:8px !important; padding:6px 10px !important; font-size:0.75rem !important; text-align:right !important; white-space:pre-wrap !important; -webkit-print-color-adjust:exact !important; color-adjust:exact !important;';
+        const isInsideTable = ta.closest('table') !== null;
+        const borderStyle = milakViewModeBorderless ? (isInsideTable ? 'border:none !important; background-color:transparent !important;' : 'border:1px solid #adb5bd !important; border-radius:0 !important; background-color:transparent !important;') : 'background-color:#fff !important; border:1px solid #ced4da !important; border-radius:8px !important;';
+        div.style.cssText = `display:block; width:100%; min-height:60px; ${borderStyle} padding:6px 10px !important; font-size:0.75rem !important; text-align:right !important; white-space:pre-wrap !important; -webkit-print-color-adjust:exact !important; color-adjust:exact !important;`;
         ta.parentNode.replaceChild(div, ta);
     });
     clone.querySelectorAll('input[type="checkbox"]').forEach(cb => {
@@ -6823,6 +6967,14 @@ function exportMilakToExcel() {
                     }
                 });
             });
+            // Set active tab to Milak Sheet (index 1) so users don't see Pez Sheet first
+            workbook.views = [{
+                x: 0, y: 0, width: 10000, height: 20000,
+                firstSheet: 1,
+                activeTab: 1,
+                visibility: 'visible'
+            }];
+            
             // Write buffer & Download
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -6845,10 +6997,4 @@ function exportMilakToExcel() {
 function exportLeaveTeachersToExcel() {
     // Just trigger the same main export which populates all sheets in one file
     exportMilakToExcel();
-}
-
-function exportToExcel() {
-    // Redirect weekly timetable export to call the unified export
-    // to export all 3 sheets in one single file!
-    exportMilakToExcel();
-}
+}

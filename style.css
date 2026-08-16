@@ -1554,3 +1554,18 @@ body {
         zoom: 0.5;
     }
 }
+/* Borderless mode for Milak Form */
+.milak-borderless-mode input.form-control,
+.milak-borderless-mode select.form-select,
+.milak-borderless-mode textarea.form-control {
+    border: 1px solid #adb5bd !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.milak-borderless-mode table input.form-control,
+.milak-borderless-mode table select.form-select,
+.milak-borderless-mode table textarea.form-control {
+    border: none !important;
+}
